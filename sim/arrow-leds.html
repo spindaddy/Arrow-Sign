@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arrow Sign — LED Simulator</title>
+  <style>
+    :root {
+      --bg: #1a1c1e;
+      --panel: #242628;
+      --ink: #e8e6e1;
+      --muted: #9a9690;
+      --body: #8a8e94;
+      --led-off: #2a2c2e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 20px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--panel);
+      border-bottom: 1px solid #33363a;
+    }
+    h1 { margin: 0; font-size: 1.05rem; font-weight: 600; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+    button {
+      appearance: none;
+      border: 1px solid #44484d;
+      background: #2c2f33;
+      color: var(--ink);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    button:hover { border-color: #6a7078; }
+    button.active {
+      background: #3d4a38;
+      border-color: #8fad6e;
+      color: #e8f0d8;
+    }
+    .meta { font-size: 0.8rem; color: var(--muted); }
+    main {
+      display: grid;
+      place-items: center;
+      padding: 12px 16px 24px;
+      overflow: auto;
+    }
+    svg {
+      width: min(560px, 94vw);
+      height: auto;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Arrow Sign LED Simulator</h1>
+      <div class="meta">Exact CAD outline · 24 short + 35 long · patterns 1–5</div>
+    </div>
+    <div class="controls" id="patternButtons"></div>
+  </header>
+  <main>
+    <svg id="stage" viewBox="0 0 640 860" role="img" aria-label="Arrow sign from CAD outline">
+      <path id="body" fill="var(--body)" />
+      <g id="leds"></g>
+    </svg>
+  </main>
+  <script src="outline-data.js"></script>
+  <script>
+    const DATA = window.ARROW_OUTLINE;
+    const SHORT_N = DATA.short.length;
+    const LONG_N = DATA.long.length;
+
+    const PATTERNS = [
+      { id: 1, name: "Chase Fast" },
+      { id: 2, name: "Chase Half" },
+      { id: 3, name: "Chase Fine" },
+      { id: 4, name: "Twinkle" },
+      { id: 5, name: "Broken Sign" },
+    ];
+
+    document.getElementById("stage").setAttribute(
+      "viewBox",
+      DATA.viewBox.join(" ")
+    );
+    document.getElementById("body").setAttribute("d", DATA.path_d);
+
+    const leds = [
+      ...DATA.short.map((p, i) => ({ strip: "short", index: i, x: p.x, y: p.y })),
+      ...DATA.long.map((p, i) => ({ strip: "long", index: i, x: p.x, y: p.y })),
+    ];
+
+    const g = document.getElementById("leds");
+    const circles = leds.map((led) => {
+      const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      c.setAttribute("cx", led.x);
+      c.setAttribute("cy", led.y);
+      c.setAttribute("r", 7);
+      c.setAttribute("stroke", "#1a1c1e");
+      c.setAttribute("stroke-width", "1.3");
+      c.setAttribute("fill", "var(--led-off)");
+      g.appendChild(c);
+      return c;
+    });
+
+    let pattern = 5;
+    let startMs = performance.now();
+
+    const fault = leds.map(() => ({
+      on: true, chronic: false, next: 0, level: 0.55,
+    }));
+    const shortIdx = leds.map((l, i) => (l.strip === "short" ? i : -1)).filter((i) => i >= 0);
+    const longIdx = leds.map((l, i) => (l.strip === "long" ? i : -1)).filter((i) => i >= 0);
+    for (const pool of [shortIdx, longIdx]) {
+      const picks = new Set();
+      while (picks.size < 2) picks.add(pool[Math.floor(Math.random() * pool.length)]);
+      for (const i of picks) fault[i].chronic = true;
+    }
+    const deadGroups = [
+      { start: 10, count: 5, strip: "long", dead: false, next: 0 },
+      { start: 22, count: 6, strip: "long", dead: false, next: 0 },
+      { start: 5, count: 4, strip: "short", dead: false, next: 0 },
+    ];
+
+    const btnBox = document.getElementById("patternButtons");
+    PATTERNS.forEach((p) => {
+      const b = document.createElement("button");
+      b.textContent = `${p.id} ${p.name}`;
+      b.dataset.id = String(p.id);
+      b.addEventListener("click", () => {
+        pattern = p.id;
+        startMs = performance.now();
+        const now = performance.now();
+        fault.forEach((f) => {
+          f.on = f.chronic ? Math.random() > 0.5 : true;
+          f.next = now + 200 + Math.random() * 2000;
+          f.level = 0.45 + Math.random() * 0.4;
+        });
+        deadGroups.forEach((dg) => {
+          dg.dead = false;
+          dg.next = now + 2000 + Math.random() * 4000;
+        });
+        syncButtons();
+      });
+      btnBox.appendChild(b);
+    });
+    function syncButtons() {
+      [...btnBox.children].forEach((b) => {
+        b.classList.toggle("active", Number(b.dataset.id) === pattern);
+      });
+    }
+    syncButtons();
+
+    function warm(level) {
+      const l = Math.max(0, Math.min(1, level));
+      if (l < 0.02) return "#2a2c2e";
+      return `rgb(${Math.round(255 * l)},${Math.round(210 * l)},${Math.round(60 * l)})`;
+    }
+
+    function wrap01(p) {
+      p = p % 1;
+      return p < 0 ? p + 1 : p;
+    }
+
+    function pToHead(p, syncA, syncB, last) {
+      p = wrap01(p);
+      const PA = syncA / Math.max(1, SHORT_N - 1);
+      const PB = syncB / Math.max(1, SHORT_N - 1);
+      if (p >= 1) return last;
+      if (p <= PA) return (p / PA) * syncA;
+      if (p <= PB) return syncA + ((p - PA) / (PB - PA)) * (syncB - syncA);
+      if (last <= syncB) return syncB;
+      return syncB + ((p - PB) / (1 - PB)) * (last - syncB);
+    }
+
+    function chaseLevels(now, syncBMs, groups, headLeds) {
+      const PB = 8 / Math.max(1, SHORT_N - 1);
+      const cycle = syncBMs / PB;
+      const t = ((now - startMs) % cycle) / Math.max(1, cycle - 1);
+      const levels = {
+        short: new Array(SHORT_N).fill(0),
+        long: new Array(LONG_N).fill(0),
+      };
+
+      function paint(arr, last, syncA, syncB, mirror) {
+        for (let g = 0; g < groups; g++) {
+          const gp = wrap01(t - g / groups);
+          let head = pToHead(gp, syncA, syncB, last);
+          if (head > last) head = last;
+          for (let i = 0; i <= last; i++) {
+            const d = Math.abs(i - head);
+            const v = d < headLeds ? 1 - d / headLeds : 0;
+            if (v > arr[i]) arr[i] = v;
+          }
+        }
+        if (mirror && last >= 23 && arr[22] > 0.05) arr[23] = arr[22];
+      }
+
+      paint(levels.short, SHORT_N - 1, 6, 8, true);
+      paint(levels.long, LONG_N - 1, 10, 19, false);
+      return levels;
+    }
+
+    function tick(now) {
+      const levels = {
+        short: new Array(SHORT_N).fill(0),
+        long: new Array(LONG_N).fill(0),
+      };
+
+      if (pattern === 1) Object.assign(levels, chaseLevels(now, 667, 3, 2));
+      else if (pattern === 2) Object.assign(levels, chaseLevels(now, 1334, 3, 2));
+      else if (pattern === 3) Object.assign(levels, chaseLevels(now, 889, 10, 1));
+      else if (pattern === 4) {
+        for (let i = 0; i < SHORT_N; i++) {
+          levels.short[i] = 0.28 + 0.18 * Math.sin(now / 180 + i * 1.7) + Math.random() * 0.06;
+        }
+        for (let i = 0; i < LONG_N; i++) {
+          levels.long[i] = 0.28 + 0.18 * Math.sin(now / 200 + i * 1.3) + Math.random() * 0.06;
+        }
+      } else {
+        for (const dg of deadGroups) {
+          if (now >= dg.next) {
+            dg.dead = !dg.dead;
+            dg.next = now + (dg.dead ? 1500 + Math.random() * 7000 : 3000 + Math.random() * 8000);
+          }
+        }
+        leds.forEach((led, i) => {
+          const f = fault[i];
+          if (now >= f.next) {
+            f.on = !f.on;
+            if (f.on) f.level = f.chronic ? 0.25 + Math.random() * 0.5 : 0.4 + Math.random() * 0.35;
+            f.next = now + (f.chronic
+              ? (f.on ? 200 + Math.random() * 500 : 150 + Math.random() * 350)
+              : (f.on ? 2000 + Math.random() * 10000 : 40 + Math.random() * 500));
+          }
+          let dead = false;
+          for (const dg of deadGroups) {
+            if (dg.dead && dg.strip === led.strip &&
+                led.index >= dg.start && led.index < dg.start + dg.count) {
+              dead = true;
+            }
+          }
+          const v = !f.on || dead ? 0 : f.level;
+          if (led.strip === "short") levels.short[led.index] = v;
+          else levels.long[led.index] = v;
+        });
+      }
+
+      circles.forEach((c, i) => {
+        const led = leds[i];
+        const v = led.strip === "short" ? levels.short[led.index] : levels.long[led.index];
+        c.setAttribute("fill", warm(v));
+      });
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
