@@ -35,15 +35,19 @@ void twinkleStrip(Adafruit_NeoPixel &strip) {
 
 }  // namespace
 
-void pattern4Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong) {
-  randomSeed(esp_random());
+void pattern4Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
+                   Adafruit_NeoPixel &stripSign) {
+  randomSeed(analogRead(A6) ^ millis());
   twinkleStrip(stripShort);
   twinkleStrip(stripLong);
+  twinkleStrip(stripSign);
   Serial.println("  Twinkle: all on, soft random twinkle");
 }
 
-void pattern4Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong) {
+void pattern4Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
+                  Adafruit_NeoPixel &stripSign) {
   twinkleStrip(stripShort);
   twinkleStrip(stripLong);
+  twinkleStrip(stripSign);
   delay(FRAME_MS);
 }

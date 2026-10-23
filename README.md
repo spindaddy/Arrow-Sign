@@ -1,19 +1,30 @@
 # Arrow Sign
 
-ESP32-C3 firmware for a bent-arrow NeoPixel sign, plus a browser LED simulator traced from the CAD outline.
+Arduino Nano firmware for a bent-arrow NeoPixel sign, plus a browser LED simulator traced from the CAD outline.
 
 ## Hardware
 
+Target board matches the EasyEDA schematic (Arduino Nano + LM7805 + DIP SW1).
+
+| Connector | Role | Nano pin | LEDs |
+|-----------|------|----------|------|
+| LED1 | Short strip | **D2** | 24 |
+| LED2 | Long strip | **D3** | 35 |
+| LED3 | Sign strip | **D4** | 40 |
+| LED4 | Unused (reserved) | **D5** | — |
+
 | Item | Detail |
 |------|--------|
-| Board | ESP32-C3 Super Mini |
-| Short strip | GPIO **4**, **24** LEDs |
-| Long strip | GPIO **2**, **35** LEDs |
+| Board | Arduino Nano (ATmega328P) |
 | Color order | `NEO_RGB` (warm yellow-white ~ RGB 255, 210, 60) |
+| DIP SW1 | **A0–A3**, other side GND → `INPUT_PULLUP` (ON = LOW). Read at boot for serial; not used for pattern select yet |
+| LED6 / LED7 | 12V strips, pot + MOSFET dimming — hardware only, no MCU pins |
+
+XH headers for LED1–LED4: pin1 GND, pin2 +5V, pin3 data.
 
 ## Patterns
 
-Patterns cycle every **60 seconds**. Boot starts on **Broken Sign**.
+Patterns cycle every **60 seconds**. Boot starts on **Broken Sign**. All three addressable strips run each pattern (chase landmarks remain short↔long; sign uses the same timing on a linear chase).
 
 | # | Name | Description |
 |---|------|-------------|
@@ -34,11 +45,13 @@ pio run -t upload
 pio device monitor   # optional, 115200 baud
 ```
 
-USB CDC is enabled for the Super Mini’s native USB port.
+Default env is `nanoatmega328` (classic Nano bootloader). For newer Optiboot Nanos, set `board = nanoatmega328new` in `platformio.ini`.
 
 ## LED simulator
 
 Open `sim/arrow-leds.html` in a browser to preview patterns on the CAD outline (no board needed). Outline and hole positions are in `sim/outline.json` / `sim/outline-data.js`.
+
+The simulator still shows the **short + long** arrow CAD only; the 40-LED sign strip is firmware-side and not laid out in the sim yet.
 
 ## Repo layout
 

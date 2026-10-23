@@ -101,14 +101,17 @@ void patternStep(Adafruit_NeoPixel &strip, float p, int syncA, int syncB,
 
 }  // namespace
 
-void pattern1Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong) {
+void pattern1Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
+                   Adafruit_NeoPixel &stripSign) {
   (void)stripShort;
   (void)stripLong;
+  (void)stripSign;
   chaseStartMs = millis();
   Serial.println("  Chase Fast: 3×2 LEDs; sync 7/11 + 9/20; 23 mirrors 22");
 }
 
-void pattern1Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong) {
+void pattern1Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
+                  Adafruit_NeoPixel &stripSign) {
   const uint32_t t = (millis() - chaseStartMs) % CYCLE_MS;
   const float p = (CYCLE_MS <= 1)
                       ? 0.0f
@@ -116,9 +119,15 @@ void pattern1Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong) {
 
   const int shortLast = static_cast<int>(stripShort.numPixels()) - 1;
   const int longLast = static_cast<int>(stripLong.numPixels()) - 1;
+  const int signLast = static_cast<int>(stripSign.numPixels()) - 1;
+  const int signSyncA =
+      static_cast<int>(P_A * static_cast<float>(signLast) + 0.5f);
+  const int signSyncB =
+      static_cast<int>(P_B * static_cast<float>(signLast) + 0.5f);
 
   patternStep(stripShort, p, SHORT_SYNC_A, SHORT_SYNC_B, shortLast, true);
   patternStep(stripLong, p, LONG_SYNC_A, LONG_SYNC_B, longLast, false);
+  patternStep(stripSign, p, signSyncA, signSyncB, signLast, false);
 
   delay(5);
 }

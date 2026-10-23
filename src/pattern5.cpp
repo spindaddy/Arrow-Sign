@@ -9,6 +9,7 @@ constexpr uint8_t BASE_R = 255;
 constexpr uint8_t BASE_G = 210;
 constexpr uint8_t BASE_B = 60;
 
+// Max across short(24), long(35), sign(40)
 constexpr int MAX_LEDS = 40;
 constexpr uint16_t FRAME_MS = 20;
 
@@ -31,10 +32,13 @@ struct DeadGroup {
 
 FaultLed shortFaults[MAX_LEDS];
 FaultLed longFaults[MAX_LEDS];
+FaultLed signFaults[MAX_LEDS];
 DeadGroup shortGroups[MAX_DEAD_GROUPS];
 DeadGroup longGroups[MAX_DEAD_GROUPS];
+DeadGroup signGroups[MAX_DEAD_GROUPS];
 int shortGroupCount = 0;
 int longGroupCount = 0;
+int signGroupCount = 0;
 
 uint32_t randomDuration(bool turningOn, bool chronic) {
   if (chronic) {
@@ -200,24 +204,31 @@ void updateStrip(Adafruit_NeoPixel &strip, FaultLed *faults, DeadGroup *groups,
 
 }  // namespace
 
-void pattern5Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong) {
-  randomSeed(esp_random());
+void pattern5Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
+                   Adafruit_NeoPixel &stripSign) {
+  randomSeed(analogRead(A6) ^ millis());
   const uint32_t now = millis();
   const int nShort = static_cast<int>(stripShort.numPixels());
   const int nLong = static_cast<int>(stripLong.numPixels());
+  const int nSign = static_cast<int>(stripSign.numPixels());
 
   initStrip(shortFaults, nShort, now);
   initStrip(longFaults, nLong, now);
+  initStrip(signFaults, nSign, now);
   initGroups(shortGroups, shortGroupCount, nShort, now);
   initGroups(longGroups, longGroupCount, nLong, now);
+  initGroups(signGroups, signGroupCount, nSign, now);
 
   updateStrip(stripShort, shortFaults, shortGroups, shortGroupCount);
   updateStrip(stripLong, longFaults, longGroups, longGroupCount);
+  updateStrip(stripSign, signFaults, signGroups, signGroupCount);
   Serial.println("  Broken Sign: slow flickers + dead groups");
 }
 
-void pattern5Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong) {
+void pattern5Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
+                  Adafruit_NeoPixel &stripSign) {
   updateStrip(stripShort, shortFaults, shortGroups, shortGroupCount);
   updateStrip(stripLong, longFaults, longGroups, longGroupCount);
+  updateStrip(stripSign, signFaults, signGroups, signGroupCount);
   delay(FRAME_MS);
 }

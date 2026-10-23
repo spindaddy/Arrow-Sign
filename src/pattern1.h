@@ -4,5 +4,8 @@
 
 // Pattern 1 — Chase Fast
 // 3 groups × 2 LEDs; sync short7↔long11 and short9↔long20; short 23 mirrors 22
-void pattern1Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong);
-void pattern1Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong);
+// Sign strip: same timing, linear chase (no arrow landmarks)
+void pattern1Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
+                   Adafruit_NeoPixel &stripSign);
+void pattern1Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
+                  Adafruit_NeoPixel &stripSign);
