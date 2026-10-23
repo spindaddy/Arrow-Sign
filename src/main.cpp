@@ -23,7 +23,8 @@ static constexpr int DIP_PIN_1 = A1;
 static constexpr int DIP_PIN_2 = A2;
 static constexpr int DIP_PIN_3 = A3;
 
-static constexpr uint8_t BRIGHTNESS = 255;
+static constexpr uint8_t BRIGHTNESS_FULL = 255;
+static constexpr uint8_t BRIGHTNESS_DIM = 128;  // 50% when DIP switch 1 is ON
 
 // ---------------------------------------------------------------------------
 // Pattern catalog (cycled every PATTERN_MS)
@@ -51,6 +52,7 @@ Adafruit_NeoPixel stripSign(STRIP_SIGN_COUNT, LED3_PIN, NEO_RGB + NEO_KHZ800);
 
 static int activePattern = PATTERN_CHASE_FAST;
 static uint32_t patternStartedMs = 0;
+static uint8_t appliedBrightness = BRIGHTNESS_FULL;
 
 void setupDipPins() {
   pinMode(DIP_PIN_0, INPUT_PULLUP);
@@ -98,9 +100,26 @@ const char *patternName(int pattern) {
 
 void beginStrip(Adafruit_NeoPixel &strip) {
   strip.begin();
-  strip.setBrightness(BRIGHTNESS);
+  strip.setBrightness(BRIGHTNESS_FULL);
   strip.clear();
   strip.show();
+}
+
+// DIP switch 1 (A0): ON → all addressable strips at 50% brightness
+bool dipSwitch1On() { return digitalRead(DIP_PIN_0) == LOW; }
+
+void applyGlobalBrightness() {
+  const uint8_t bri = dipSwitch1On() ? BRIGHTNESS_DIM : BRIGHTNESS_FULL;
+  if (bri == appliedBrightness) {
+    return;
+  }
+  appliedBrightness = bri;
+  stripShort.setBrightness(bri);
+  stripLong.setBrightness(bri);
+  stripSign.setBrightness(bri);
+  Serial.print("Brightness ");
+  Serial.print(bri == BRIGHTNESS_DIM ? "50%" : "100%");
+  Serial.println(bri == BRIGHTNESS_DIM ? " (DIP1 ON)" : " (DIP1 OFF)");
 }
 
 void startPattern(int pattern) {
@@ -140,6 +159,7 @@ void setup() {
 
   Serial.print("DIP SW1 (ON=1): ");
   Serial.println(readDipMask(), BIN);
+  applyGlobalBrightness();
 
   delay(300);
 
@@ -147,6 +167,8 @@ void setup() {
 }
 
 void loop() {
+  applyGlobalBrightness();
+
   if (millis() - patternStartedMs >= PATTERN_MS) {
     const int next = (activePattern % PATTERN_COUNT) + 1;
     startPattern(next);
