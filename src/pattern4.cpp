@@ -1,4 +1,5 @@
 #include "pattern4.h"
+#include "sign_leds.h"
 
 #include <Arduino.h>
 
@@ -40,14 +41,14 @@ void pattern4Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
   randomSeed(analogRead(A6) ^ millis());
   twinkleStrip(stripShort);
   twinkleStrip(stripLong);
-  twinkleStrip(stripSign);
-  Serial.println("  Twinkle: all on, soft random twinkle");
+  fillSignWarmWhite(stripSign);  // LED3: solid warm white (not twinkling)
+  Serial.println("  Twinkle: short+long twinkle; sign solid warm white");
 }
 
 void pattern4Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
                   Adafruit_NeoPixel &stripSign) {
+  (void)stripSign;  // LED3 stays solid warm white (set in setup)
   twinkleStrip(stripShort);
   twinkleStrip(stripLong);
-  twinkleStrip(stripSign);
   delay(FRAME_MS);
 }
