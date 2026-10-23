@@ -51,9 +51,13 @@ Default env is `nanoatmega328` (classic Nano bootloader). For newer Optiboot Nan
 
 ## LED simulator
 
-Open `sim/arrow-leds.html` in a browser to preview patterns on the CAD outline (no board needed). Outline and hole positions are in `sim/outline.json` / `sim/outline-data.js`.
+Open [`sim/arrow-leds.html`](sim/arrow-leds.html) in a browser (no board needed) to test firmware behavior:
 
-The simulator still shows the **short + long** arrow CAD only; the 40-LED sign strip is firmware-side and not laid out in the sim yet.
+- Patterns 1–5 (boot = Chase Fast), optional **Auto 60s** cycle
+- **LED1/LED2** on the CAD arrow outline; **LED3** 40-LED sign strip panel
+- **DIP1** → 50% brightness; **DIP4** → disable Broken Sign
+
+Outline data: `sim/outline.json` / `sim/outline-data.js`.
 
 ## Repo layout
 
