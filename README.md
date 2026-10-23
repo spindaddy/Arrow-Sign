@@ -17,7 +17,7 @@ Target board matches the EasyEDA schematic (Arduino Nano + LM7805 + DIP SW1).
 |------|--------|
 | Board | Arduino Nano (ATmega328P) |
 | Color order | `NEO_RGB` (warm yellow-white ~ RGB 255, 210, 60) |
-| DIP SW1 | **A0–A3**, other side GND → `INPUT_PULLUP` (ON = LOW). **Switch 1 (A0) ON** → all addressable strips at **50%** brightness; OFF → 100%. Switches 2–4 reserved |
+| DIP SW1 | **A0–A3**, other side GND → `INPUT_PULLUP` (ON = LOW). **Switch 1 (A0) ON** → all strips at **50%** brightness on every pattern; **Switch 4 (A3) ON** → skip / disable **Broken Sign**; switches 2–3 reserved |
 | LED6 / LED7 | 12V strips, pot + MOSFET dimming — hardware only, no MCU pins |
 
 XH headers for LED1–LED4: pin1 GND, pin2 +5V, pin3 data.

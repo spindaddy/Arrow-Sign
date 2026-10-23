@@ -18,10 +18,10 @@ static constexpr int STRIP_LONG_COUNT = 35;
 static constexpr int STRIP_SIGN_COUNT = 40;
 
 // DIP SW1 (BD04): A0–A3 to switch, other side GND → INPUT_PULLUP (ON = LOW)
-static constexpr int DIP_PIN_0 = A0;
-static constexpr int DIP_PIN_1 = A1;
-static constexpr int DIP_PIN_2 = A2;
-static constexpr int DIP_PIN_3 = A3;
+static constexpr int DIP_PIN_0 = A0;  // switch 1
+static constexpr int DIP_PIN_1 = A1;  // switch 2
+static constexpr int DIP_PIN_2 = A2;  // switch 3
+static constexpr int DIP_PIN_3 = A3;  // switch 4
 
 static constexpr uint8_t BRIGHTNESS_FULL = 255;
 static constexpr uint8_t BRIGHTNESS_DIM = 128;  // 50% when DIP switch 1 is ON
@@ -52,7 +52,7 @@ Adafruit_NeoPixel stripSign(STRIP_SIGN_COUNT, LED3_PIN, NEO_RGB + NEO_KHZ800);
 
 static int activePattern = PATTERN_CHASE_FAST;
 static uint32_t patternStartedMs = 0;
-static uint8_t appliedBrightness = BRIGHTNESS_FULL;
+static uint8_t appliedBrightness = 0;  // force first apply
 
 void setupDipPins() {
   pinMode(DIP_PIN_0, INPUT_PULLUP);
@@ -81,6 +81,9 @@ uint8_t readDipMask() {
   return mask;
 }
 
+bool dipSwitch1On() { return digitalRead(DIP_PIN_0) == LOW; }
+bool dipSwitch4On() { return digitalRead(DIP_PIN_3) == LOW; }
+
 const char *patternName(int pattern) {
   switch (pattern) {
     case PATTERN_CHASE_FAST:
@@ -98,6 +101,32 @@ const char *patternName(int pattern) {
   }
 }
 
+bool patternAllowed(int pattern) {
+  if (pattern == PATTERN_BROKEN_SIGN && dipSwitch4On()) {
+    return false;
+  }
+  return pattern >= 1 && pattern <= PATTERN_COUNT;
+}
+
+// Next pattern in the cycle, skipping any disabled by DIP
+int nextAllowedPattern(int from) {
+  int candidate = from;
+  for (int i = 0; i < PATTERN_COUNT; i++) {
+    candidate = (candidate % PATTERN_COUNT) + 1;
+    if (patternAllowed(candidate)) {
+      return candidate;
+    }
+  }
+  return PATTERN_CHASE_FAST;
+}
+
+int resolveBootPattern() {
+  if (patternAllowed(BOOT_PATTERN)) {
+    return BOOT_PATTERN;
+  }
+  return nextAllowedPattern(BOOT_PATTERN);
+}
+
 void beginStrip(Adafruit_NeoPixel &strip) {
   strip.begin();
   strip.setBrightness(BRIGHTNESS_FULL);
@@ -105,26 +134,29 @@ void beginStrip(Adafruit_NeoPixel &strip) {
   strip.show();
 }
 
-// DIP switch 1 (A0): ON → all addressable strips at 50% brightness
-bool dipSwitch1On() { return digitalRead(DIP_PIN_0) == LOW; }
-
+// DIP switch 1 (A0): ON → all addressable strips at 50% for every pattern
 void applyGlobalBrightness() {
   const uint8_t bri = dipSwitch1On() ? BRIGHTNESS_DIM : BRIGHTNESS_FULL;
-  if (bri == appliedBrightness) {
-    return;
-  }
-  appliedBrightness = bri;
+  // Always set on all strips so every pattern's show() uses the current level
   stripShort.setBrightness(bri);
   stripLong.setBrightness(bri);
   stripSign.setBrightness(bri);
-  Serial.print("Brightness ");
-  Serial.print(bri == BRIGHTNESS_DIM ? "50%" : "100%");
-  Serial.println(bri == BRIGHTNESS_DIM ? " (DIP1 ON)" : " (DIP1 OFF)");
+  if (bri != appliedBrightness) {
+    appliedBrightness = bri;
+    Serial.print("Brightness ");
+    Serial.print(bri == BRIGHTNESS_DIM ? "50%" : "100%");
+    Serial.println(bri == BRIGHTNESS_DIM ? " (DIP1 ON)" : " (DIP1 OFF)");
+  }
 }
 
 void startPattern(int pattern) {
+  if (!patternAllowed(pattern)) {
+    pattern = nextAllowedPattern(pattern);
+  }
+
   activePattern = pattern;
   patternStartedMs = millis();
+  applyGlobalBrightness();
 
   stripShort.clear();
   stripLong.clear();
@@ -159,19 +191,27 @@ void setup() {
 
   Serial.print("DIP SW1 (ON=1): ");
   Serial.println(readDipMask(), BIN);
+  if (dipSwitch4On()) {
+    Serial.println("DIP4 ON: Broken Sign disabled");
+  }
   applyGlobalBrightness();
 
   delay(300);
 
-  startPattern(BOOT_PATTERN);
+  startPattern(resolveBootPattern());
 }
 
 void loop() {
+  // Applies to every pattern on every frame
   applyGlobalBrightness();
 
+  // DIP4 turned on while Broken Sign is active → leave immediately
+  if (!patternAllowed(activePattern)) {
+    startPattern(nextAllowedPattern(activePattern));
+  }
+
   if (millis() - patternStartedMs >= PATTERN_MS) {
-    const int next = (activePattern % PATTERN_COUNT) + 1;
-    startPattern(next);
+    startPattern(nextAllowedPattern(activePattern));
   }
 
   if (activePattern == PATTERN_CHASE_FAST) {
