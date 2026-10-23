@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Arrow Sign — LED Simulator</title>
+  <title>Arrow Sign — Function Simulator</title>
   <style>
     :root {
       --bg: #1a1c1e;
@@ -12,16 +12,20 @@
       --muted: #9a9690;
       --body: #8a8e94;
       --led-off: #2a2c2e;
+      --accent: #8fad6e;
+      --warn: #c4a35a;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
       font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
-      background: var(--bg);
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, #2a3036 0%, transparent 55%),
+        var(--bg);
       color: var(--ink);
       display: grid;
-      grid-template-rows: auto 1fr;
+      grid-template-rows: auto auto 1fr;
     }
     header {
       display: flex;
@@ -33,9 +37,26 @@
       background: var(--panel);
       border-bottom: 1px solid #33363a;
     }
-    h1 { margin: 0; font-size: 1.05rem; font-weight: 600; }
-    .controls { display: flex; flex-wrap: wrap; gap: 8px; }
-    button {
+    h1 { margin: 0; font-size: 1.15rem; font-weight: 650; letter-spacing: 0.02em; }
+    .meta { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      align-items: center;
+      padding: 12px 20px;
+      background: #1e2124;
+      border-bottom: 1px solid #33363a;
+    }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .group-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-right: 4px;
+    }
+    button, .dip {
       appearance: none;
       border: 1px solid #44484d;
       background: #2c2f33;
@@ -46,67 +67,163 @@
       font-size: 0.85rem;
       cursor: pointer;
     }
-    button:hover { border-color: #6a7078; }
+    button:hover, .dip:hover { border-color: #6a7078; }
     button.active {
       background: #3d4a38;
-      border-color: #8fad6e;
+      border-color: var(--accent);
       color: #e8f0d8;
     }
-    .meta { font-size: 0.8rem; color: var(--muted); }
+    button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .dip.on {
+      background: #3a3428;
+      border-color: var(--warn);
+      color: #f0e6c8;
+    }
+    .status {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+    .status strong { color: var(--ink); font-weight: 600; }
     main {
       display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
       place-items: center;
-      padding: 12px 16px 24px;
+      padding: 16px 16px 32px;
       overflow: auto;
     }
-    svg {
-      width: min(560px, 94vw);
+    @media (min-width: 960px) {
+      main {
+        grid-template-columns: minmax(0, 560px) minmax(260px, 360px);
+        align-items: start;
+        justify-content: center;
+      }
+    }
+    .stage-wrap, .sign-wrap {
+      width: 100%;
+      max-width: 560px;
+    }
+    .sign-wrap { max-width: 360px; }
+    .caption {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin: 0 0 8px;
+    }
+    .caption span { color: var(--ink); }
+    svg.arrow {
+      width: 100%;
       height: auto;
       display: block;
+    }
+    .sign-board {
+      background: linear-gradient(160deg, #2c3034, #222528);
+      border: 1px solid #3a3e44;
+      border-radius: 6px;
+      padding: 16px 14px 18px;
+    }
+    .sign-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin: 0 0 12px;
+    }
+    .sign-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 6px;
+    }
+    .sign-led {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--led-off);
+      border: 1px solid #1a1c1e;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.35);
+    }
+    .pin-hint {
+      margin-top: 14px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.45;
     }
   </style>
 </head>
 <body>
   <header>
     <div>
-      <h1>Arrow Sign LED Simulator</h1>
-      <div class="meta">Exact CAD outline · 24 short + 35 long · patterns 1–5 · firmware also drives 40-LED sign strip (D4)</div>
+      <h1>Arrow Sign</h1>
+      <div class="meta">Firmware function simulator · Nano · LED1–3 · DIP1 / DIP4</div>
     </div>
-    <div class="controls" id="patternButtons"></div>
+    <div class="status" id="status">—</div>
   </header>
+
+  <div class="toolbar">
+    <div class="controls">
+      <span class="group-label">Pattern</span>
+      <span id="patternButtons" class="controls"></span>
+    </div>
+    <div class="controls">
+      <span class="group-label">DIP</span>
+      <button type="button" class="dip" id="dip1" title="A0 — 50% brightness">1 · 50%</button>
+      <button type="button" class="dip" id="dip4" title="A3 — disable Broken Sign">4 · no broken</button>
+    </div>
+    <div class="controls">
+      <span class="group-label">Cycle</span>
+      <button type="button" id="autoCycle" class="active">Auto 60s</button>
+    </div>
+  </div>
+
   <main>
-    <svg id="stage" viewBox="0 0 640 860" role="img" aria-label="Arrow sign from CAD outline">
-      <path id="body" fill="var(--body)" />
-      <g id="leds"></g>
-    </svg>
+    <div class="stage-wrap">
+      <p class="caption"><span>LED1</span> short D2 · 24 &nbsp;|&nbsp; <span>LED2</span> long D3 · 35</p>
+      <svg class="arrow" id="stage" viewBox="0 0 640 860" role="img" aria-label="Arrow CAD outline">
+        <path id="body" fill="var(--body)" />
+        <g id="leds"></g>
+      </svg>
+    </div>
+    <div class="sign-wrap">
+      <p class="caption"><span>LED3</span> sign D4 · 40</p>
+      <div class="sign-board">
+        <p class="sign-title">Sign strip</p>
+        <div class="sign-grid" id="signGrid" aria-label="40 LED sign strip"></div>
+        <p class="pin-hint">
+          Solid warm white on patterns 1–4.<br />
+          Random whole-strip on/off flicker on Broken Sign.<br />
+          DIP1 dims everything to 50%. DIP4 skips pattern 5.
+        </p>
+      </div>
+    </div>
   </main>
+
   <script src="outline-data.js"></script>
   <script>
     const DATA = window.ARROW_OUTLINE;
     const SHORT_N = DATA.short.length;
     const LONG_N = DATA.long.length;
+    const SIGN_N = 40;
+    const PATTERN_MS = 60000;
+    const BOOT_PATTERN = 1;
 
     const PATTERNS = [
-      { id: 1, name: "Chase Fast" },
+      { id: 1, name: "Chase Fast", boot: true },
       { id: 2, name: "Chase Half" },
       { id: 3, name: "Chase Fine" },
       { id: 4, name: "Twinkle" },
       { id: 5, name: "Broken Sign" },
     ];
 
-    document.getElementById("stage").setAttribute(
-      "viewBox",
-      DATA.viewBox.join(" ")
-    );
+    document.getElementById("stage").setAttribute("viewBox", DATA.viewBox.join(" "));
     document.getElementById("body").setAttribute("d", DATA.path_d);
 
-    const leds = [
+    const arrowLeds = [
       ...DATA.short.map((p, i) => ({ strip: "short", index: i, x: p.x, y: p.y })),
       ...DATA.long.map((p, i) => ({ strip: "long", index: i, x: p.x, y: p.y })),
     ];
 
     const g = document.getElementById("leds");
-    const circles = leds.map((led) => {
+    const arrowCircles = arrowLeds.map((led) => {
       const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       c.setAttribute("cx", led.x);
       c.setAttribute("cy", led.y);
@@ -118,14 +235,28 @@
       return c;
     });
 
-    let pattern = 5;
-    let startMs = performance.now();
+    const signGrid = document.getElementById("signGrid");
+    const signCells = Array.from({ length: SIGN_N }, (_, i) => {
+      const d = document.createElement("div");
+      d.className = "sign-led";
+      d.title = `LED3[${i}]`;
+      signGrid.appendChild(d);
+      return d;
+    });
 
-    const fault = leds.map(() => ({
+    let pattern = BOOT_PATTERN;
+    let startMs = performance.now();
+    let patternStartedMs = performance.now();
+    let autoCycle = true;
+    let dip1 = false; // 50% brightness
+    let dip4 = false; // disable broken
+
+    // Broken-sign state (short + long)
+    const fault = arrowLeds.map(() => ({
       on: true, chronic: false, next: 0, level: 0.55,
     }));
-    const shortIdx = leds.map((l, i) => (l.strip === "short" ? i : -1)).filter((i) => i >= 0);
-    const longIdx = leds.map((l, i) => (l.strip === "long" ? i : -1)).filter((i) => i >= 0);
+    const shortIdx = arrowLeds.map((l, i) => (l.strip === "short" ? i : -1)).filter((i) => i >= 0);
+    const longIdx = arrowLeds.map((l, i) => (l.strip === "long" ? i : -1)).filter((i) => i >= 0);
     for (const pool of [shortIdx, longIdx]) {
       const picks = new Set();
       while (picks.size < 2) picks.add(pool[Math.floor(Math.random() * pool.length)]);
@@ -137,37 +268,102 @@
       { start: 5, count: 4, strip: "short", dead: false, next: 0 },
     ];
 
+    // LED3 whole-strip flicker (Broken Sign only)
+    let signOn = true;
+    let signNextMs = 0;
+
+    function patternAllowed(id) {
+      if (id === 5 && dip4) return false;
+      return id >= 1 && id <= 5;
+    }
+
+    function nextAllowed(from) {
+      let c = from;
+      for (let i = 0; i < 5; i++) {
+        c = (c % 5) + 1;
+        if (patternAllowed(c)) return c;
+      }
+      return 1;
+    }
+
+    function resetBrokenState(now) {
+      fault.forEach((f) => {
+        f.on = f.chronic ? Math.random() > 0.5 : true;
+        f.next = now + 200 + Math.random() * 2000;
+        f.level = 0.45 + Math.random() * 0.4;
+      });
+      deadGroups.forEach((dg) => {
+        dg.dead = false;
+        dg.next = now + 2000 + Math.random() * 4000;
+      });
+      signOn = true;
+      signNextMs = now + 200 + Math.random() * 600;
+    }
+
+    function setPattern(id, now = performance.now()) {
+      if (!patternAllowed(id)) id = nextAllowed(id);
+      pattern = id;
+      startMs = now;
+      patternStartedMs = now;
+      resetBrokenState(now);
+      syncButtons();
+      updateStatus(now);
+    }
+
     const btnBox = document.getElementById("patternButtons");
     PATTERNS.forEach((p) => {
       const b = document.createElement("button");
-      b.textContent = `${p.id} ${p.name}`;
+      b.type = "button";
+      b.textContent = p.boot ? `${p.id} ${p.name} ★` : `${p.id} ${p.name}`;
       b.dataset.id = String(p.id);
-      b.addEventListener("click", () => {
-        pattern = p.id;
-        startMs = performance.now();
-        const now = performance.now();
-        fault.forEach((f) => {
-          f.on = f.chronic ? Math.random() > 0.5 : true;
-          f.next = now + 200 + Math.random() * 2000;
-          f.level = 0.45 + Math.random() * 0.4;
-        });
-        deadGroups.forEach((dg) => {
-          dg.dead = false;
-          dg.next = now + 2000 + Math.random() * 4000;
-        });
-        syncButtons();
-      });
+      b.addEventListener("click", () => setPattern(p.id));
       btnBox.appendChild(b);
     });
+
     function syncButtons() {
       [...btnBox.children].forEach((b) => {
-        b.classList.toggle("active", Number(b.dataset.id) === pattern);
+        const id = Number(b.dataset.id);
+        b.disabled = !patternAllowed(id);
+        b.classList.toggle("active", id === pattern);
       });
     }
-    syncButtons();
 
-    function warm(level) {
-      const l = Math.max(0, Math.min(1, level));
+    const dip1Btn = document.getElementById("dip1");
+    const dip4Btn = document.getElementById("dip4");
+    const autoBtn = document.getElementById("autoCycle");
+
+    dip1Btn.addEventListener("click", () => {
+      dip1 = !dip1;
+      dip1Btn.classList.toggle("on", dip1);
+      updateStatus(performance.now());
+    });
+    dip4Btn.addEventListener("click", () => {
+      dip4 = !dip4;
+      dip4Btn.classList.toggle("on", dip4);
+      if (!patternAllowed(pattern)) setPattern(nextAllowed(pattern));
+      else syncButtons();
+      updateStatus(performance.now());
+    });
+    autoBtn.addEventListener("click", () => {
+      autoCycle = !autoCycle;
+      autoBtn.classList.toggle("active", autoCycle);
+      if (autoCycle) patternStartedMs = performance.now();
+      updateStatus(performance.now());
+    });
+
+    function updateStatus(now) {
+      const bri = dip1 ? "50%" : "100%";
+      const left = autoCycle
+        ? Math.max(0, Math.ceil((PATTERN_MS - (now - patternStartedMs)) / 1000))
+        : "—";
+      const name = PATTERNS.find((p) => p.id === pattern)?.name ?? "?";
+      document.getElementById("status").innerHTML =
+        `Pattern <strong>${pattern} ${name}</strong> · brightness <strong>${bri}</strong>` +
+        (autoCycle ? ` · next in <strong>${left}s</strong>` : " · auto off");
+    }
+
+    function warm(level, scale) {
+      const l = Math.max(0, Math.min(1, level)) * scale;
       if (l < 0.02) return "#2a2c2e";
       return `rgb(${Math.round(255 * l)},${Math.round(210 * l)},${Math.round(60 * l)})`;
     }
@@ -199,12 +395,12 @@
 
       function paint(arr, last, syncA, syncB, mirror) {
         for (let g = 0; g < groups; g++) {
-          const gp = wrap01(t - g / groups);
+          const gp = wrap01(t + g / groups);
           let head = pToHead(gp, syncA, syncB, last);
           if (head > last) head = last;
           for (let i = 0; i <= last; i++) {
-            const d = Math.abs(i - head);
-            const v = d < headLeds ? 1 - d / headLeds : 0;
+            const behind = head - i;
+            const v = behind >= 0 && behind < headLeds ? 1 - behind / headLeds : 0;
             if (v > arr[i]) arr[i] = v;
           }
         }
@@ -216,11 +412,33 @@
       return levels;
     }
 
+    function signFlickerDuration(turningOn) {
+      if (turningOn) {
+        const roll = Math.random() * 100;
+        if (roll < 60) return 400 + Math.random() * 1400;
+        if (roll < 90) return 1800 + Math.random() * 2700;
+        return 80 + Math.random() * 320;
+      }
+      const roll = Math.random() * 100;
+      if (roll < 65) return 40 + Math.random() * 140;
+      if (roll < 90) return 180 + Math.random() * 320;
+      return 500 + Math.random() * 700;
+    }
+
     function tick(now) {
+      if (autoCycle && now - patternStartedMs >= PATTERN_MS) {
+        setPattern(nextAllowed(pattern), now);
+      }
+      if (!patternAllowed(pattern)) {
+        setPattern(nextAllowed(pattern), now);
+      }
+
+      const scale = dip1 ? 0.5 : 1;
       const levels = {
         short: new Array(SHORT_N).fill(0),
         long: new Array(LONG_N).fill(0),
       };
+      let signLevel = 1; // solid warm white by default
 
       if (pattern === 1) Object.assign(levels, chaseLevels(now, 667, 3, 2));
       else if (pattern === 2) Object.assign(levels, chaseLevels(now, 1334, 3, 2));
@@ -239,7 +457,7 @@
             dg.next = now + (dg.dead ? 1500 + Math.random() * 7000 : 3000 + Math.random() * 8000);
           }
         }
-        leds.forEach((led, i) => {
+        arrowLeds.forEach((led, i) => {
           const f = fault[i];
           if (now >= f.next) {
             f.on = !f.on;
@@ -259,15 +477,29 @@
           if (led.strip === "short") levels.short[led.index] = v;
           else levels.long[led.index] = v;
         });
+
+        while (now >= signNextMs) {
+          signOn = !signOn;
+          signNextMs = now + signFlickerDuration(signOn);
+        }
+        signLevel = signOn ? 1 : 0;
       }
 
-      circles.forEach((c, i) => {
-        const led = leds[i];
+      arrowCircles.forEach((c, i) => {
+        const led = arrowLeds[i];
         const v = led.strip === "short" ? levels.short[led.index] : levels.long[led.index];
-        c.setAttribute("fill", warm(v));
+        c.setAttribute("fill", warm(v, scale));
       });
+      signCells.forEach((cell) => {
+        cell.style.background = warm(signLevel, scale);
+      });
+
+      if (Math.floor(now / 250) !== Math.floor((now - 16) / 250)) updateStatus(now);
       requestAnimationFrame(tick);
     }
+
+    syncButtons();
+    updateStatus(performance.now());
     requestAnimationFrame(tick);
   </script>
 </body>
