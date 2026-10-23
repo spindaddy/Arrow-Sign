@@ -1,4 +1,5 @@
 #include "pattern1.h"
+#include "sign_leds.h"
 
 #include <Arduino.h>
 #include <math.h>
@@ -101,14 +102,18 @@ void patternStep(Adafruit_NeoPixel &strip, float p, int syncA, int syncB,
 
 }  // namespace
 
-void pattern1Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong) {
+void pattern1Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
+                   Adafruit_NeoPixel &stripSign) {
   (void)stripShort;
   (void)stripLong;
   chaseStartMs = millis();
+  fillSignWarmWhite(stripSign);
   Serial.println("  Chase Fast: 3×2 LEDs; sync 7/11 + 9/20; 23 mirrors 22");
 }
 
-void pattern1Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong) {
+void pattern1Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
+                  Adafruit_NeoPixel &stripSign) {
+  (void)stripSign;  // LED3 stays solid warm white (set in setup)
   const uint32_t t = (millis() - chaseStartMs) % CYCLE_MS;
   const float p = (CYCLE_MS <= 1)
                       ? 0.0f
