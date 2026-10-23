@@ -24,13 +24,13 @@ XH headers for LED1–LED4: pin1 GND, pin2 +5V, pin3 data.
 
 ## Patterns
 
-Patterns cycle every **60 seconds**. Boot starts on **Broken Sign**.
+Patterns cycle every **60 seconds**. Boot starts on **Chase Fast** (pattern 1).
 
 **LED3 (sign, D4):** solid warm white (`RGB 255, 210, 60`) during patterns 1–4; random whole-strip on/off flicker during **Broken Sign** (pattern 5).
 
 | # | Name | Description |
 |---|------|-------------|
-| 1 | Chase Fast | 3 groups × 2 LEDs; sync short7↔long11 and short9↔long20; short LED23 mirrors 22 |
+| 1 | Chase Fast ★ boot | 3 groups × 2 LEDs; sync short7↔long11 and short9↔long20; short LED23 mirrors 22 |
 | 2 | Chase Half | Same as Chase Fast at 50% speed |
 | 3 | Chase Fine | Same landmarks; 10 groups × 1 LED; ~75% of Pattern 1 speed |
 | 4 | Twinkle | Short + long soft random twinkle; sign solid warm white |

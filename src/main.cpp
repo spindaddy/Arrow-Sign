@@ -44,7 +44,7 @@ enum PatternId : int {
 
 static constexpr int PATTERN_COUNT = 5;
 static constexpr uint32_t PATTERN_MS = 60000;  // 1 minute each
-static constexpr PatternId BOOT_PATTERN = PATTERN_BROKEN_SIGN;
+static constexpr PatternId BOOT_PATTERN = PATTERN_CHASE_FAST;
 
 Adafruit_NeoPixel stripShort(STRIP_SHORT_COUNT, LED1_PIN, NEO_RGB + NEO_KHZ800);
 Adafruit_NeoPixel stripLong(STRIP_LONG_COUNT, LED2_PIN, NEO_RGB + NEO_KHZ800);
