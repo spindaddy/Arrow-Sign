@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arrow Sign — Live</title>
+  <style>
+    :root {
+      --bg: #141618;
+      --panel: #1e2124;
+      --ink: #e8e6e1;
+      --muted: #9a9690;
+      --line: #34383c;
+      --off: #2a2c2e;
+      --sign: #2a2c2e;
+      --warm: #e4c36a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    h1 { margin: 0; font-size: 1.15rem; font-weight: 600; }
+    .sub { margin-top: 4px; font-size: 0.8rem; color: var(--muted); }
+    .live {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .live i {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #5c6168;
+      display: block;
+    }
+    .live.on { color: var(--ink); border-color: #5d6b48; }
+    .live.on i { background: #9cba78; }
+    main {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 18px;
+      padding: 18px 22px 28px;
+      max-width: 1100px;
+    }
+    .sign-panel { grid-column: 1 / -1; }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px 18px 18px;
+    }
+    .kicker {
+      margin: 0 0 10px;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .sign-state {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .sign-state h2 { margin: 0; font-size: 1.35rem; font-weight: 600; }
+    .sign-state p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+    .strand {
+      display: grid;
+      grid-template-columns: repeat(40, 1fr);
+      gap: 4px;
+    }
+    .led {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--sign);
+    }
+    .pattern h2 { margin: 0 0 6px; font-size: 1.2rem; }
+    .pattern .remain { margin: 0 0 12px; color: var(--muted); font-size: 0.85rem; }
+    .track {
+      height: 8px;
+      background: var(--off);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .fill {
+      height: 100%;
+      width: 0%;
+      background: var(--warm);
+    }
+    .next { margin: 10px 0 0; font-size: 0.85rem; color: var(--muted); }
+    .dip-list { display: flex; flex-direction: column; gap: 10px; }
+    button.dip {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      align-items: center;
+      width: 100%;
+      padding: 8px 0;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .dip:last-child { border-bottom: 0; }
+    .dip-name { font-size: 0.9rem; }
+    .dip-pin { display: block; font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .rocker {
+      width: 44px;
+      height: 22px;
+      border-radius: 11px;
+      background: #2a2c2e;
+      border: 1px solid #44484d;
+      position: relative;
+    }
+    .knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #6e6a64;
+    }
+    .dip.on .knob { left: 24px; background: var(--warm); }
+    .dip.on .rocker { border-color: #8a7040; }
+    .dip.unknown .knob { background: #3a3d40; }
+    .dip-state { width: 2.2rem; font-size: 0.75rem; color: var(--muted); text-align: right; }
+    .dip.on .dip-state { color: var(--warm); }
+    .effect { margin: 12px 0 0; font-size: 0.85rem; color: var(--ink); min-height: 1.2em; }
+    .raw {
+      grid-column: 1 / -1;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding: 0 2px;
+    }
+    @media (max-width: 800px) {
+      main { grid-template-columns: 1fr; }
+      .strand { grid-template-columns: repeat(20, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Arrow Sign</h1>
+      <div class="sub" id="portLine">LED3 sign strand · DIP SW1</div>
+    </div>
+    <div class="live" id="live"><i></i><span id="liveText">Offline</span></div>
+  </header>
+  <main>
+    <section class="sign-panel">
+      <p class="kicker">LED3 · D4 · 200 LEDs, one color</p>
+      <div class="sign-state">
+        <h2 id="signTitle">Waiting</h2>
+        <p id="signDetail">No status from the Nano yet</p>
+      </div>
+      <div class="strand" id="strand" aria-label="200 LED sign strand"></div>
+    </section>
+    <section class="pattern">
+      <p class="kicker">Pattern</p>
+      <h2 id="patName">—</h2>
+      <p class="remain" id="remain">60 second cycle</p>
+      <div class="track" aria-hidden="true"><div class="fill" id="fill"></div></div>
+      <p class="next" id="nextLine"></p>
+    </section>
+    <section>
+      <p class="kicker">DIP SW1 · click to toggle</p>
+      <div class="dip-list" id="dips"></div>
+      <p class="effect" id="effect"></p>
+    </section>
+    <p class="raw" id="raw">AS —</p>
+  </main>
+  <script>
+    const NAMES = {
+      1: "Chase Fast",
+      2: "Chase Half",
+      3: "Chase Fine",
+      4: "Twinkle",
+      5: "Broken Sign",
+    };
+    const DIPS = [
+      { pin: "A0", name: "25% brightness" },
+      { pin: "A1", name: "LED3 warm white" },
+      { pin: "A2", name: "Reserved" },
+      { pin: "A3", name: "Skip Broken Sign" },
+    ];
+    const CYCLE = 60000;
+    const strand = document.getElementById("strand");
+    for (let i = 0; i < 200; i++) {
+      const led = document.createElement("span");
+      led.className = "led";
+      led.title = "LED " + (i + 1);
+      strand.appendChild(led);
+    }
+    let latest = null;
+    const dipRoot = document.getElementById("dips");
+    DIPS.forEach((d, i) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "dip unknown";
+      row.id = "dip" + (i + 1);
+      row.innerHTML =
+        '<div><div class="dip-name">' + (i + 1) + "  " + d.name +
+        '</div><span class="dip-pin">' + d.pin + "</span></div>" +
+        '<div class="rocker" aria-hidden="true"><span class="knob"></span></div>' +
+        '<span class="dip-state">—</span>';
+      row.addEventListener("click", () => {
+        if (!latest || latest.pat == null || !latest.d) return;
+        const turningOn = latest.d[i] !== 1;
+        fetch("/dip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ n: i + 1, on: turningOn ? 1 : 0 }),
+        });
+      });
+      dipRoot.appendChild(row);
+    });
+
+    function nextPattern(pat, d4) {
+      let n = pat;
+      for (let i = 0; i < 5; i++) {
+        n = (n % 5) + 1;
+        if (!(n === 5 && d4)) return n;
+      }
+      return 1;
+    }
+
+    function render(s) {
+      latest = s;
+      const live = s.connected && s.pat != null;
+      const badge = document.getElementById("live");
+      badge.classList.toggle("on", !!s.connected);
+      document.getElementById("liveText").textContent = s.connected
+        ? (s.pat == null ? "Port open" : "Live")
+        : "Offline";
+      document.getElementById("portLine").textContent = s.port
+        ? "LED3 sign strand · " + s.port
+        : "LED3 sign strand · DIP SW1";
+
+      const scale = s.bri === 25 ? 0.25 : 1;
+      const warm = live && s.d && s.d[1] === 1;
+      const on = live && s.sign === 1;
+      const sg = warm ? 167 : 220;
+      const sb = warm ? 87 : 191;
+      const color = on
+        ? "rgb(" + Math.round(255 * scale) + "," + Math.round(sg * scale) + "," + Math.round(sb * scale) + ")"
+        : "#2a2c2e";
+      document.documentElement.style.setProperty("--sign", color);
+
+      const title = document.getElementById("signTitle");
+      const detail = document.getElementById("signDetail");
+      if (!s.connected) {
+        title.textContent = "Offline";
+        detail.textContent = s.error || "Nano serial port is not open";
+      } else if (s.pat == null) {
+        title.textContent = "Waiting";
+        detail.textContent = "Port is open, no status line yet";
+      } else if (!s.sign) {
+        title.textContent = "Sign dark";
+        detail.textContent = "All 200 LEDs off";
+      } else if (scale < 1) {
+        title.textContent = warm ? "2700K warm white" : "4600K white";
+        detail.textContent = "All 200 LEDs at 25%";
+      } else {
+        title.textContent = warm ? "2700K warm white" : "4600K white";
+        detail.textContent = "All 200 LEDs at full brightness";
+      }
+
+      const name = NAMES[s.pat] || "—";
+      document.getElementById("patName").textContent = s.pat ? (s.pat + "  " + name) : "—";
+      const ms = live ? Math.max(0, s.ms | 0) : 0;
+      const left = live ? Math.max(0, CYCLE - ms) / 1000 : 60;
+      document.getElementById("remain").textContent = live
+        ? Math.ceil(left) + "s left in this minute"
+        : "60 second cycle";
+      document.getElementById("fill").style.width = live
+        ? Math.min(100, (ms / CYCLE) * 100) + "%"
+        : "0%";
+      const d4 = live && s.d && s.d[3] === 1;
+      const nxt = live ? nextPattern(s.pat, d4) : null;
+      document.getElementById("nextLine").textContent = nxt
+        ? "Next  " + nxt + "  " + NAMES[nxt]
+        : "";
+
+      DIPS.forEach((_, i) => {
+        const row = document.getElementById("dip" + (i + 1));
+        const known = live && s.d;
+        const isOn = known && s.d[i] === 1;
+        row.classList.toggle("unknown", !known);
+        row.classList.toggle("on", !!isOn);
+        row.querySelector(".dip-state").textContent = known ? (isOn ? "ON" : "OFF") : "—";
+      });
+
+      const notes = [];
+      if (live && s.d && s.d[0] === 1) notes.push("Switch 1 is holding every strip at 25%.");
+      if (live && s.d) {
+        notes.push(s.d[1] === 1
+          ? "Switch 2 is showing LED3 in 2700K warm white."
+          : "LED3 is 4600K white.");
+      }
+      if (live && s.d && s.d[3] === 1) notes.push("Switch 4 is skipping Broken Sign.");
+      document.getElementById("effect").textContent = notes.join(" ");
+
+      document.getElementById("raw").textContent = s.raw || "AS —";
+    }
+
+    const source = new EventSource("/events");
+    source.onmessage = (ev) => render(JSON.parse(ev.data));
+    source.onerror = () => render({
+      connected: false,
+      pat: null,
+      error: "Dashboard stream dropped",
+    });
+  </script>
+</body>
+</html>

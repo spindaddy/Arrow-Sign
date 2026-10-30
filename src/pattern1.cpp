@@ -71,7 +71,8 @@ float pToHead(float p, int syncA, int syncB, int last) {
 }
 
 void patternStep(Adafruit_NeoPixel &strip, float p, int syncA, int syncB,
-                 int last, bool mirror22to23) {
+                 int last, bool mirror22to23, uint8_t cr, uint8_t cg,
+                 uint8_t cb) {
   const int n = static_cast<int>(strip.numPixels());
   strip.clear();
 
@@ -85,7 +86,7 @@ void patternStep(Adafruit_NeoPixel &strip, float p, int syncA, int syncB,
     for (int i = 0; i <= last && i < n; i++) {
       const float behind = head - static_cast<float>(i);
       if (behind >= 0.0f && behind < static_cast<float>(HEAD_LEDS)) {
-        strip.setPixelColor(i, strip.Color(255, 210, 60));
+        strip.setPixelColor(i, strip.Color(cr, cg, cb));
       }
     }
   }
@@ -113,7 +114,7 @@ void pattern1Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
 
 void pattern1Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
                   Adafruit_NeoPixel &stripSign) {
-  (void)stripSign;  // LED3 stays solid warm white (set in setup)
+  (void)stripSign;  // LED3 stays solid 4600K white (set in setup)
   const uint32_t t = (millis() - chaseStartMs) % CYCLE_MS;
   const float p = (CYCLE_MS <= 1)
                       ? 0.0f
@@ -122,8 +123,10 @@ void pattern1Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
   const int shortLast = static_cast<int>(stripShort.numPixels()) - 1;
   const int longLast = static_cast<int>(stripLong.numPixels()) - 1;
 
-  patternStep(stripShort, p, SHORT_SYNC_A, SHORT_SYNC_B, shortLast, true);
-  patternStep(stripLong, p, LONG_SYNC_A, LONG_SYNC_B, longLast, false);
+  patternStep(stripShort, p, SHORT_SYNC_A, SHORT_SYNC_B, shortLast, true, 255,
+              210, 60);
+  patternStep(stripLong, p, LONG_SYNC_A, LONG_SYNC_B, longLast, false, 255, 210,
+              60);
 
   delay(5);
 }

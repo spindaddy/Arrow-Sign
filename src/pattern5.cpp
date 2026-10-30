@@ -5,11 +5,6 @@
 
 namespace {
 
-// Warm yellow-white
-constexpr uint8_t BASE_R = 255;
-constexpr uint8_t BASE_G = 210;
-constexpr uint8_t BASE_B = 60;
-
 // Max across short(24) and long(35); sign uses a separate low-RAM flicker
 constexpr int MAX_LEDS = 35;
 constexpr uint16_t FRAME_MS = 20;
@@ -180,7 +175,7 @@ void initStrip(FaultLed *faults, int n, uint32_t now) {
 }
 
 void updateStrip(Adafruit_NeoPixel &strip, FaultLed *faults, DeadGroup *groups,
-                 int groupCount) {
+                 int groupCount, uint8_t baseR, uint8_t baseG, uint8_t baseB) {
   const int n = static_cast<int>(strip.numPixels());
   const uint32_t now = millis();
 
@@ -195,9 +190,9 @@ void updateStrip(Adafruit_NeoPixel &strip, FaultLed *faults, DeadGroup *groups,
       strip.setPixelColor(i, 0);
     } else {
       const uint8_t level = faults[i].level;
-      const uint8_t r = static_cast<uint8_t>((BASE_R * level) / 255);
-      const uint8_t g = static_cast<uint8_t>((BASE_G * level) / 255);
-      const uint8_t b = static_cast<uint8_t>((BASE_B * level) / 255);
+      const uint8_t r = static_cast<uint8_t>((baseR * level) / 255);
+      const uint8_t g = static_cast<uint8_t>((baseG * level) / 255);
+      const uint8_t b = static_cast<uint8_t>((baseB * level) / 255);
       strip.setPixelColor(i, strip.Color(r, g, b));
     }
   }
@@ -247,6 +242,8 @@ void updateSignFlicker(Adafruit_NeoPixel &stripSign) {
 
 }  // namespace
 
+bool pattern5SignIsOn() { return signOn; }
+
 void pattern5Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
                    Adafruit_NeoPixel &stripSign) {
   randomSeed(analogRead(A6) ^ millis());
@@ -263,15 +260,15 @@ void pattern5Setup(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
   signNextMs = now + random(200, 800);
   fillSignWarmWhite(stripSign);
 
-  updateStrip(stripShort, shortFaults, shortGroups, shortGroupCount);
-  updateStrip(stripLong, longFaults, longGroups, longGroupCount);
+  updateStrip(stripShort, shortFaults, shortGroups, shortGroupCount, 255, 210, 60);
+  updateStrip(stripLong, longFaults, longGroups, longGroupCount, 255, 210, 60);
   Serial.println("  Broken Sign: short+long faults; sign random on/off flicker");
 }
 
 void pattern5Loop(Adafruit_NeoPixel &stripShort, Adafruit_NeoPixel &stripLong,
                   Adafruit_NeoPixel &stripSign) {
-  updateStrip(stripShort, shortFaults, shortGroups, shortGroupCount);
-  updateStrip(stripLong, longFaults, longGroups, longGroupCount);
+  updateStrip(stripShort, shortFaults, shortGroups, shortGroupCount, 255, 210, 60);
+  updateStrip(stripLong, longFaults, longGroups, longGroupCount, 255, 210, 60);
   updateSignFlicker(stripSign);
   delay(FRAME_MS);
 }
